@@ -1,0 +1,201 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Hub</title>
+    <style>
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f4f4f4; font-family: Arial, sans-serif; }
+        canvas { border: 2px solid #333; background-color: #fff; display: none; }
+        table { border-collapse: collapse; display: none; }
+        td { width: 100px; height: 100px; text-align: center; font-size: 24px; border: 1px solid #333; cursor: pointer; }
+        input { margin: 10px; }
+        #gameContainer { display: flex; flex-direction: column; align-items: center; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Games Hub</h1>
+    <button onclick="showGame('snake')">Snake Game</button>
+    <button onclick="showGame('tictactoe')">Tic Tac Toe</button>
+    <button onclick="showGame('agecalculator')">Age Calculator</button>
+
+    <div id="gameContainer">
+        <!-- Snake Game -->
+        <canvas id="snakeCanvas" width="400" height="400"></canvas>
+
+        <!-- Tic Tac Toe -->
+        <table id="tictactoe">
+            <tr>
+                <td data-index="0"></td>
+                <td data-index="1"></td>
+                <td data-index="2"></td>
+            </tr>
+            <tr>
+                <td data-index="3"></td>
+                <td data-index="4"></td>
+                <td data-index="5"></td>
+            </tr>
+            <tr>
+                <td data-index="6"></td>
+                <td data-index="7"></td>
+                <td data-index="8"></td>
+            </tr>
+        </table>
+
+        <!-- Age Calculator -->
+        <div id="agecalculator" class="hidden">
+            <h2>Age Calculator</h2>
+            <label for="birthdate">Enter your birth date:</label>
+            <input type="date" id="birthdate">
+            <button id="calculate">Calculate Age</button>
+            <p id="ageResult"></p>
+        </div>
+    </div>
+
+    <script>
+        // Snake Game
+        const snakeCanvas = document.getElementById('snakeCanvas');
+        const ctx = snakeCanvas.getContext('2d');
+
+        const box = 20;
+        let snake = [{ x: box * 5, y: box * 5 }];
+        let direction = 'RIGHT';
+        let food = spawnFood();
+        let score = 0;
+
+        document.addEventListener('keydown', directionControl);
+
+        function directionControl(event) {
+            if (event.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+            else if (event.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+            else if (event.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+            else if (event.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+        }
+
+        function spawnFood() {
+            return {
+                x: Math.floor(Math.random() * (snakeCanvas.width / box)) * box,
+                y: Math.floor(Math.random() * (snakeCanvas.height / box)) * box,
+            };
+        }
+
+        function drawSnake() {
+            ctx.clearRect(0, 0, snakeCanvas.width, snakeCanvas.height);
+
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillStyle = (i === 0) ? 'green' : 'lightgreen';
+                ctx.fillRect(snake[i].x, snake[i].y, box, box);
+                ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+            }
+
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x, food.y, box, box);
+
+            let snakeX = snake[0].x;
+            let snakeY = snake[0].y;
+
+            if (direction === 'UP') snakeY -= box;
+            if (direction === 'DOWN') snakeY += box;
+            if (direction === 'LEFT') snakeX -= box;
+            if (direction === 'RIGHT') snakeX += box;
+
+            if (snakeX === food.x && snakeY === food.y) {
+                food = spawnFood();
+                score++;
+            } else {
+                snake.pop();
+            }
+
+            const newHead = { x: snakeX, y: snakeY };
+
+            if (snakeX < 0 || snakeY < 0 || snakeX >= snakeCanvas.width || snakeY >= snakeCanvas.height || collision(newHead, snake)) {
+                clearInterval(game);
+                alert(`Game Over! Your score: ${score}`);
+                resetSnakeGame();
+            }
+
+            snake.unshift(newHead);
+        }
+
+        function collision(head, array) {
+            return array.some(part => head.x === part.x && head.y === part.y);
+        }
+
+        function resetSnakeGame() {
+            snake = [{ x: box * 5, y: box * 5 }];
+            direction = 'RIGHT';
+            food = spawnFood();
+            score = 0;
+        }
+
+        const game = setInterval(drawSnake, 100);
+
+        // Tic Tac Toe
+        const cells = document.querySelectorAll('#tictactoe td');
+        let currentPlayer = 'X';
+        let board = Array(9).fill(null);
+
+        cells.forEach(cell => {
+            cell.addEventListener('click', () => {
+                const index = cell.getAttribute('data-index');
+                if (!board[index]) {
+                    board[index] = currentPlayer;
+                    cell.textContent = currentPlayer;
+                    if (checkWinner()) {
+                        setTimeout(() => alert(`${currentPlayer} wins!`), 10);
+                        resetTicTacToe();
+                    } else if (board.every(cell => cell)) {
+                        setTimeout(() => alert("It's a draw!"), 10);
+                        resetTicTacToe();
+                    }
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                }
+            });
+        });
+
+        function checkWinner() {
+            const winningCombinations = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+            return winningCombinations.some(combination => {
+                return combination.every(index => board[index] === currentPlayer);
+            });
+        }
+
+        function resetTicTacToe() {
+            board.fill(null);
+            cells.forEach(cell => cell.textContent = '');
+            currentPlayer = 'X';
+        }
+
+        // Age Calculator
+        document.getElementById('calculate').addEventListener('click', function() {
+            const birthdate = new Date(document.getElementById('birthdate').value);
+            const today = new Date();
+            let age = today.getFullYear() - birthdate.getFullYear();
+            const monthDiff = today.getMonth() - birthdate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthdate.getDate())) {
+                age--;
+            }
+            document.getElementById('ageResult').textContent = `Your age is: ${age} years`;
+        });
+
+        // Show Game Function
+        function showGame(game) {
+            document.getElementById('snakeCanvas').style.display = game === 'snake' ? 'block' : 'none';
+            document.getElementById('tictactoe').style.display = game === 'tictactoe' ? 'table' : 'none';
+            document.getElementById('agecalculator').style.display = game === 'agecalculator' ? 'block' : 'none';
+
+            // Reset games when switching
+            if (game === 'snake') resetSnakeGame();
+            if (game === 'tictactoe') resetTicTacToe();
+        }
+
+        // Show Snake Game by default
+        showGame('snake');
+    </script>
+</body>
+</html>
